@@ -1,0 +1,5 @@
+/* Tailwind utilities only - preflight is disabled in tailwind.config.js so
+   this doesn't reset global styles theme.css already owns. Used only by
+   the Bento-grid Galeri page for now. */
+@tailwind components;
+@tailwind utilities;

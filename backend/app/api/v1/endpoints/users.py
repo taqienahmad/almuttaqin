@@ -4,14 +4,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.v1.deps import get_current_user, require_roles
 from app.db.session import get_db
 from app.models.user import User, UserRole
-from app.schemas.user import UserCreate, UserPasswordReset, UserRead
+from app.schemas.user import UserCreate, UserPasswordReset, UserRead, UserUpdate
 from app.services import parent_child_service
 from app.services.auth_service import (
     create_user,
     get_user_by_email,
     get_user_by_id,
+    get_user_by_nip,
+    get_user_by_nis,
     list_users,
     update_password,
+    update_user,
 )
 
 router = APIRouter()
@@ -26,6 +29,10 @@ async def create_account(
     existing = await get_user_by_email(db, user_in.email)
     if existing is not None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+    if user_in.nis and await get_user_by_nis(db, user_in.nis) is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="NIS sudah digunakan akun lain")
+    if user_in.nip and await get_user_by_nip(db, user_in.nip) is not None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="NIP sudah digunakan akun lain")
     return await create_user(db, user_in)
 
 
@@ -41,6 +48,29 @@ async def list_accounts(
 @router.get("/me", response_model=UserRead)
 async def read_me(current_user: User = Depends(get_current_user)) -> UserRead:
     return current_user
+
+
+@router.put("/{user_id}", response_model=UserRead)
+async def update_account(
+    user_id: int,
+    user_in: UserUpdate,
+    db: AsyncSession = Depends(get_db),
+    _admin: User = Depends(require_roles(UserRole.ADMIN)),
+) -> UserRead:
+    user = await get_user_by_id(db, user_id)
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Akun tidak ditemukan")
+
+    if user_in.nis and user_in.nis != user.nis:
+        existing_nis = await get_user_by_nis(db, user_in.nis)
+        if existing_nis is not None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="NIS sudah digunakan akun lain")
+    if user_in.nip and user_in.nip != user.nip:
+        existing_nip = await get_user_by_nip(db, user_in.nip)
+        if existing_nip is not None:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="NIP sudah digunakan akun lain")
+
+    return await update_user(db, user, user_in)
 
 
 @router.put("/{user_id}/password", response_model=UserRead)

@@ -22,6 +22,14 @@ export interface UserCreateInput {
   kelas_id?: number;
 }
 
+export interface UserUpdateInput {
+  full_name?: string | null;
+  nis?: string | null;
+  nip?: string | null;
+  kelas_id?: number | null;
+  is_active?: boolean;
+}
+
 export interface Kelas {
   id: number;
   name: string;

@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { kelasApi, mataPelajaranApi } from "../api/academic";
 import { contactApi } from "../api/contact";
 import { contentItemsApi } from "../api/contentItems";
@@ -53,6 +53,13 @@ const SITE_SETTING_FIELDS: SiteSettingField[] = [
   { key: "cta_description", label: "Deskripsi banner CTA", group: "Beranda", multiline: true },
   { key: "sejarah", label: "Sejarah singkat", group: "Profil Sekolah", multiline: true },
   { key: "visi", label: "Visi sekolah", group: "Profil Sekolah", multiline: true },
+  { key: "program_hero_title", label: "Judul utama halaman Program", group: "Program" },
+  { key: "program_hero_description", label: "Deskripsi hero halaman Program", group: "Program", multiline: true },
+  {
+    key: "program_methodology_quote",
+    label: "Kutipan motivasi di bagian metode pembelajaran",
+    group: "Program",
+  },
   { key: "school_name", label: "Nama sekolah lengkap", group: "Umum & Kontak" },
   { key: "footer_tagline", label: "Tagline singkat di footer", group: "Umum & Kontak" },
   { key: "address", label: "Alamat", group: "Umum & Kontak", multiline: true },
@@ -72,6 +79,7 @@ interface ContentSectionConfig {
   hasSubtitle?: boolean;
   subtitleLabel?: string;
   hasDescription?: boolean;
+  descriptionLabel?: string;
   hasImage?: boolean;
 }
 
@@ -94,32 +102,32 @@ const CONTENT_SECTIONS: ContentSectionConfig[] = [
     label: "Kelompok Usia",
     group: "Program",
     titleLabel: "Nama Kelompok",
+    hasIcon: true,
     hasSubtitle: true,
     subtitleLabel: "Rentang Usia",
     hasDescription: true,
   },
-  { value: "pengembangan", label: "Program Pengembangan (6 Aspek)", group: "Program", hasIcon: true, hasDescription: true },
-  { value: "kompetensi", label: "Kompetensi Pembelajaran", group: "Program", hasIcon: true, hasDescription: true },
   {
-    value: "alokasi_waktu",
-    label: "Alokasi Waktu Belajar",
+    value: "kompetensi",
+    label: "Kompetensi Pembelajaran",
     group: "Program",
-    titleLabel: "Hari",
-    hasSubtitle: true,
-    subtitleLabel: "Jam/Keterangan",
+    hasIcon: true,
+    hasDescription: true,
+    descriptionLabel:
+      "Deskripsi & Highlight (baris pertama = penjelasan, hingga 4 baris berikutnya = poin highlight — 2 item pertama tampil sebagai kartu unggulan di halaman Program)",
   },
   { value: "metode", label: "Metode Pembelajaran", group: "Program" },
-  { value: "pembiasaan", label: "Kegiatan Islami & Pembiasaan", group: "Program" },
   {
     value: "jadwal_harian",
     label: "Jadwal Harian",
-    group: "Kegiatan",
+    group: "Program",
     titleLabel: "Waktu",
     hasSubtitle: true,
     subtitleLabel: "Kegiatan",
+    hasDescription: true,
+    descriptionLabel:
+      "Deskripsi & Highlight (baris pertama = penjelasan, hingga 3 baris berikutnya = poin highlight)",
   },
-  { value: "tematik", label: "Kegiatan Tematik", group: "Kegiatan" },
-  { value: "event", label: "Outing / Parenting / Event", group: "Kegiatan" },
   { value: "syarat_ppdb", label: "Syarat Pendaftaran", group: "PPDB" },
   { value: "alur_ppdb", label: "Alur Pendaftaran", group: "PPDB", hasDescription: true },
   { value: "biaya_ppdb", label: "Kategori Biaya", group: "PPDB" },
@@ -220,12 +228,24 @@ export function AdminDashboard() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [ppdbList, setPpdbList] = useState<PPDBRegistration[]>([]);
   const [userList, setUserList] = useState<User[]>([]);
+  const orangTuaUsers = useMemo(() => userList.filter((u) => u.role === "orang_tua"), [userList]);
+  const siswaUsers = useMemo(() => userList.filter((u) => u.role === "siswa"), [userList]);
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
 
   const [userEmail, setUserEmail] = useState("");
   const [userPassword, setUserPassword] = useState("");
   const [userRole, setUserRole] = useState<UserRole>("siswa");
+  const [userFullName, setUserFullName] = useState("");
+  const [userNis, setUserNis] = useState("");
+  const [userNip, setUserNip] = useState("");
+  const [userKelasId, setUserKelasId] = useState("");
   const [message, setMessage] = useState<string | null>(null);
+
+  const [editingUserId, setEditingUserId] = useState<number | null>(null);
+  const [editUserFullName, setEditUserFullName] = useState("");
+  const [editUserNis, setEditUserNis] = useState("");
+  const [editUserNip, setEditUserNip] = useState("");
+  const [editUserKelasId, setEditUserKelasId] = useState("");
 
   const [kelasName, setKelasName] = useState("");
   const [mapelName, setMapelName] = useState("");
@@ -374,10 +394,18 @@ export function AdminDashboard() {
         email: userEmail,
         password: userPassword,
         role: userRole,
+        full_name: userFullName.trim() || undefined,
+        nis: userRole === "siswa" ? userNis.trim() || undefined : undefined,
+        nip: userRole === "guru" ? userNip.trim() || undefined : undefined,
+        kelas_id: userRole === "siswa" && userKelasId ? Number(userKelasId) : undefined,
       });
       setMessage(`Akun ${userEmail} (${userRole}) berhasil dibuat.`);
       setUserEmail("");
       setUserPassword("");
+      setUserFullName("");
+      setUserNis("");
+      setUserNip("");
+      setUserKelasId("");
       refresh();
     } catch (err) {
       setMessage(err instanceof Error ? err.message : "Gagal membuat akun");
@@ -474,6 +502,42 @@ export function AdminDashboard() {
     refresh();
   }
 
+  function handleStartEditUser(u: User) {
+    setEditingUserId(u.id);
+    setEditUserFullName(u.full_name ?? "");
+    setEditUserNis(u.nis ?? "");
+    setEditUserNip(u.nip ?? "");
+    setEditUserKelasId(u.kelas_id ? String(u.kelas_id) : "");
+  }
+
+  function handleCancelEditUser() {
+    setEditingUserId(null);
+    setEditUserFullName("");
+    setEditUserNis("");
+    setEditUserNip("");
+    setEditUserKelasId("");
+  }
+
+  async function handleUpdateUser(e: FormEvent) {
+    e.preventDefault();
+    if (editingUserId === null) return;
+    await usersApi.update(editingUserId, {
+      full_name: editUserFullName.trim() || null,
+      nis: editUserNis.trim() || null,
+      nip: editUserNip.trim() || null,
+      kelas_id: editUserKelasId ? Number(editUserKelasId) : null,
+    });
+    handleCancelEditUser();
+    refresh();
+  }
+
+  async function handleToggleActive(u: User) {
+    const action = u.is_active ? "nonaktifkan" : "aktifkan kembali";
+    if (!window.confirm(`Yakin ${action} akun ${u.email}?`)) return;
+    await usersApi.update(u.id, { is_active: !u.is_active });
+    refresh();
+  }
+
   async function handleLinkChild(e: FormEvent) {
     e.preventDefault();
     setLinkMessage(null);
@@ -520,11 +584,12 @@ export function AdminDashboard() {
             />
           </div>
           <div className="field">
-            <label htmlFor="admin-user-password">Password</label>
+            <label htmlFor="admin-user-password">Password (minimal 8 karakter)</label>
             <input
               id="admin-user-password"
               className="input"
               type="password"
+              minLength={8}
               value={userPassword}
               onChange={(e) => setUserPassword(e.target.value)}
               required
@@ -544,6 +609,55 @@ export function AdminDashboard() {
               <option value="admin">Admin</option>
             </select>
           </div>
+          <div className="field">
+            <label htmlFor="admin-user-fullname">Nama Lengkap</label>
+            <input
+              id="admin-user-fullname"
+              className="input"
+              value={userFullName}
+              onChange={(e) => setUserFullName(e.target.value)}
+            />
+          </div>
+          {userRole === "siswa" && (
+            <div className="field">
+              <label htmlFor="admin-user-nis">NIS</label>
+              <input
+                id="admin-user-nis"
+                className="input"
+                value={userNis}
+                onChange={(e) => setUserNis(e.target.value)}
+              />
+            </div>
+          )}
+          {userRole === "siswa" && (
+            <div className="field">
+              <label htmlFor="admin-user-kelas">Kelas</label>
+              <select
+                id="admin-user-kelas"
+                className="input"
+                value={userKelasId}
+                onChange={(e) => setUserKelasId(e.target.value)}
+              >
+                <option value="">Belum ada kelas</option>
+                {kelasList.map((k) => (
+                  <option key={k.id} value={k.id}>
+                    {k.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+          {userRole === "guru" && (
+            <div className="field">
+              <label htmlFor="admin-user-nip">NIP</label>
+              <input
+                id="admin-user-nip"
+                className="input"
+                value={userNip}
+                onChange={(e) => setUserNip(e.target.value)}
+              />
+            </div>
+          )}
           <button type="submit" className="btn">
             Buat Akun
           </button>
@@ -555,17 +669,93 @@ export function AdminDashboard() {
         <h2>Semua Akun</h2>
         {userList.length === 0 && <p className="empty-state">Belum ada akun.</p>}
         <ul>
-          {userList.map((u) => (
-            <li key={u.id} className="list-row">
-              <div className="list-row-main">
-                <span className="list-row-title">
-                  #{u.id} &middot; {u.email}
+          {userList.map((u) =>
+            editingUserId === u.id ? (
+              <li key={u.id} className="list-row">
+                <form onSubmit={handleUpdateUser} className="form-row">
+                  <div className="field">
+                    <label htmlFor="admin-user-edit-fullname">Nama Lengkap</label>
+                    <input
+                      id="admin-user-edit-fullname"
+                      className="input"
+                      value={editUserFullName}
+                      onChange={(e) => setEditUserFullName(e.target.value)}
+                    />
+                  </div>
+                  {u.role === "siswa" && (
+                    <div className="field">
+                      <label htmlFor="admin-user-edit-nis">NIS</label>
+                      <input
+                        id="admin-user-edit-nis"
+                        className="input"
+                        value={editUserNis}
+                        onChange={(e) => setEditUserNis(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  {u.role === "siswa" && (
+                    <div className="field">
+                      <label htmlFor="admin-user-edit-kelas">Kelas</label>
+                      <select
+                        id="admin-user-edit-kelas"
+                        className="input"
+                        value={editUserKelasId}
+                        onChange={(e) => setEditUserKelasId(e.target.value)}
+                      >
+                        <option value="">Belum ada kelas</option>
+                        {kelasList.map((k) => (
+                          <option key={k.id} value={k.id}>
+                            {k.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {u.role === "guru" && (
+                    <div className="field">
+                      <label htmlFor="admin-user-edit-nip">NIP</label>
+                      <input
+                        id="admin-user-edit-nip"
+                        className="input"
+                        value={editUserNip}
+                        onChange={(e) => setEditUserNip(e.target.value)}
+                      />
+                    </div>
+                  )}
+                  <button type="submit" className="btn btn-sm">
+                    Simpan
+                  </button>
+                  <button type="button" className="btn btn-sm btn-outline" onClick={handleCancelEditUser}>
+                    Batal
+                  </button>
+                </form>
+              </li>
+            ) : (
+              <li key={u.id} className="list-row">
+                <div className="list-row-main">
+                  <span className="list-row-title">
+                    #{u.id} &middot; {u.email}
+                  </span>
+                  <span className="list-row-meta">
+                    {u.full_name ?? "-"}
+                    {u.nis && ` · NIS ${u.nis}`}
+                    {u.nip && ` · NIP ${u.nip}`}
+                    {u.kelas_id && ` · ${kelasList.find((k) => k.id === u.kelas_id)?.name ?? "kelas #" + u.kelas_id}`}
+                  </span>
+                </div>
+                <span className="badge">{u.role}</span>
+                <span className={u.is_active ? "badge badge-success" : "badge badge-danger"}>
+                  {u.is_active ? "Aktif" : "Nonaktif"}
                 </span>
-                <span className="list-row-meta">{u.full_name ?? "-"}</span>
-              </div>
-              <span className="badge">{u.role}</span>
-            </li>
-          ))}
+                <button type="button" className="btn btn-sm btn-outline" onClick={() => handleStartEditUser(u)}>
+                  Edit
+                </button>
+                <button type="button" className="btn btn-sm btn-danger" onClick={() => handleToggleActive(u)}>
+                  {u.is_active ? "Nonaktifkan" : "Aktifkan"}
+                </button>
+              </li>
+            ),
+          )}
         </ul>
       </section>
 
@@ -590,11 +780,12 @@ export function AdminDashboard() {
             </select>
           </div>
           <div className="field">
-            <label htmlFor="admin-reset-password">Password baru</label>
+            <label htmlFor="admin-reset-password">Password baru (minimal 8 karakter)</label>
             <input
               id="admin-reset-password"
               className="input"
               type="password"
+              minLength={8}
               value={resetNewPassword}
               onChange={(e) => setResetNewPassword(e.target.value)}
               required
@@ -614,24 +805,38 @@ export function AdminDashboard() {
         </p>
         <form onSubmit={handleLinkChild} className="form-row">
           <div className="field">
-            <label htmlFor="admin-link-parent">ID Orang Tua</label>
-            <input
+            <label htmlFor="admin-link-parent">Orang Tua</label>
+            <select
               id="admin-link-parent"
               className="input"
               value={parentId}
               onChange={(e) => setParentId(e.target.value)}
               required
-            />
+            >
+              <option value="">Pilih orang tua</option>
+              {orangTuaUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name ?? u.email} (#{u.id})
+                </option>
+              ))}
+            </select>
           </div>
           <div className="field">
-            <label htmlFor="admin-link-student">ID Siswa</label>
-            <input
+            <label htmlFor="admin-link-student">Siswa</label>
+            <select
               id="admin-link-student"
               className="input"
               value={studentId}
               onChange={(e) => setStudentId(e.target.value)}
               required
-            />
+            >
+              <option value="">Pilih siswa</option>
+              {siswaUsers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.full_name ?? u.email} (#{u.id})
+                </option>
+              ))}
+            </select>
           </div>
           <button type="submit" className="btn">
             Hubungkan
@@ -1045,11 +1250,11 @@ export function AdminDashboard() {
           )}
           {contentSectionConfig.hasDescription && (
             <div className="field">
-              <label htmlFor="admin-content-description">Deskripsi</label>
+              <label htmlFor="admin-content-description">{contentSectionConfig.descriptionLabel ?? "Deskripsi"}</label>
               <textarea
                 id="admin-content-description"
                 className="input"
-                rows={2}
+                rows={4}
                 value={contentDescription}
                 onChange={(e) => setContentDescription(e.target.value)}
               />
@@ -1121,11 +1326,13 @@ export function AdminDashboard() {
                   )}
                   {contentSectionConfig.hasDescription && (
                     <div className="field">
-                      <label htmlFor="admin-content-edit-description">Deskripsi</label>
+                      <label htmlFor="admin-content-edit-description">
+                        {contentSectionConfig.descriptionLabel ?? "Deskripsi"}
+                      </label>
                       <textarea
                         id="admin-content-edit-description"
                         className="input"
-                        rows={2}
+                        rows={4}
                         value={editContentDescription}
                         onChange={(e) => setEditContentDescription(e.target.value)}
                       />

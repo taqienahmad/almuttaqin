@@ -61,7 +61,6 @@ export function Footer() {
           <h4>Jelajahi</h4>
           <Link to="/profil">Profil Sekolah</Link>
           <Link to="/program">Program</Link>
-          <Link to="/kegiatan">Kegiatan</Link>
           <Link to="/galeri">Galeri</Link>
           <Link to="/ppdb">PPDB</Link>
           <Link to="/kontak">Kontak</Link>

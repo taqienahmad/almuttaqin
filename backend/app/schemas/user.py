@@ -1,13 +1,17 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.user import UserRole
+
+# Applies to any newly-set password (account creation, admin reset) - not
+# retroactive for accounts created before this was added.
+PASSWORD_MIN_LENGTH = 8
 
 
 class UserCreate(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=PASSWORD_MIN_LENGTH)
     full_name: str | None = None
     role: UserRole
     nis: str | None = None
@@ -21,7 +25,15 @@ class UserLogin(BaseModel):
 
 
 class UserPasswordReset(BaseModel):
-    new_password: str
+    new_password: str = Field(min_length=PASSWORD_MIN_LENGTH)
+
+
+class UserUpdate(BaseModel):
+    full_name: str | None = None
+    nis: str | None = None
+    nip: str | None = None
+    kelas_id: int | None = None
+    is_active: bool | None = None
 
 
 class UserRead(BaseModel):

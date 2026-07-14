@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, NavLink } from "react-router-dom";
 
 export function PublicNav() {
   return (
@@ -9,13 +9,14 @@ export function PublicNav() {
           <span>Taman Asuh Anak Muslim (TAAM) Al Muttaqin</span>
         </Link>
         <nav className="public-nav-links">
-          <Link to="/">Beranda</Link>
-          <Link to="/profil">Profil Sekolah</Link>
-          <Link to="/program">Program</Link>
-          <Link to="/kegiatan">Kegiatan</Link>
-          <Link to="/ppdb">PPDB</Link>
-          <Link to="/galeri">Galeri</Link>
-          <Link to="/kontak">Kontak</Link>
+          <NavLink to="/" end>
+            Beranda
+          </NavLink>
+          <NavLink to="/profil">Profil Sekolah</NavLink>
+          <NavLink to="/program">Program</NavLink>
+          <NavLink to="/ppdb">PPDB</NavLink>
+          <NavLink to="/galeri">Galeri</NavLink>
+          <NavLink to="/kontak">Kontak</NavLink>
           <Link to="/login" className="btn btn-sm">
             Login
           </Link>

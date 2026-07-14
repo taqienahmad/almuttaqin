@@ -1,9 +1,11 @@
+import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { contentItemsApi } from "../api/contentItems";
 import { Icon, type IconName } from "../components/Icon";
 import { Footer } from "../components/Footer";
 import { PublicNav } from "../components/PublicNav";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import { staggerContainer, staggerItem } from "../motionVariants";
 import type { ContentItem } from "../types";
 
 export function ProfilPage() {
@@ -74,17 +76,23 @@ export function ProfilPage() {
               <p className="eyebrow">Yang Kami Pegang Teguh</p>
               <h2>Nilai-Nilai Sekolah</h2>
             </div>
-            <div className="grid">
+            <motion.div
+              className="grid"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+            >
               {nilai.map((item) => (
-                <div className="card feature-card" key={item.id}>
+                <motion.div className="card feature-card" key={item.id} variants={staggerItem}>
                   <div className="icon-circle">
                     <Icon name={(item.icon ?? "heart") as IconName} />
                   </div>
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
@@ -95,17 +103,23 @@ export function ProfilPage() {
               <p className="eyebrow">Sarana &amp; Prasarana</p>
               <h2>Fasilitas</h2>
             </div>
-            <div className="grid">
+            <motion.div
+              className="grid"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+            >
               {fasilitas.map((item) => (
-                <div className="card facility-card" key={item.id}>
+                <motion.div className="card facility-card" key={item.id} variants={staggerItem}>
                   <div className="icon-circle">
                     <Icon name={(item.icon ?? "home") as IconName} />
                   </div>
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 
@@ -116,15 +130,21 @@ export function ProfilPage() {
               <p className="eyebrow">Dibimbing Langsung Oleh</p>
               <h2>Tenaga Pendidik</h2>
             </div>
-            <div className="grid">
+            <motion.div
+              className="grid"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+            >
               {tenagaPendidik.map((t) => (
-                <div className="card teacher-card" key={t.id}>
+                <motion.div className="card teacher-card" key={t.id} variants={staggerItem}>
                   <div className="teacher-avatar">{t.title.charAt(t.title.indexOf(" ") + 1)}</div>
                   <h3>{t.title}</h3>
                   <p className="testimonial-role">{t.subtitle}</p>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
       </main>

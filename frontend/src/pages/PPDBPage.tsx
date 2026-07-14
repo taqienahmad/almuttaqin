@@ -1,9 +1,11 @@
+import { motion } from "motion/react";
 import { FormEvent, useEffect, useState } from "react";
 import { contentItemsApi } from "../api/contentItems";
 import { ppdbApi } from "../api/ppdb";
 import { Footer } from "../components/Footer";
 import { BermainIllustration } from "../components/illustrations";
 import { PublicNav } from "../components/PublicNav";
+import { staggerContainer, staggerItem } from "../motionVariants";
 import { useSchoolInfo } from "../schoolInfo";
 import type { ContentItem, Kelompok, PPDBInput } from "../types";
 
@@ -84,17 +86,23 @@ export function PPDBPage() {
             <p className="eyebrow">Langkah Demi Langkah</p>
             <h2>Alur Pendaftaran</h2>
           </div>
-          <div className="card numbered-steps">
+          <motion.div
+            className="card numbered-steps"
+            variants={staggerContainer}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, amount: 0.2 }}
+          >
             {alur.map((step, index) => (
-              <div className="numbered-step" key={step.id}>
+              <motion.div className="numbered-step" key={step.id} variants={staggerItem}>
                 <div className="numbered-step-index">{index + 1}</div>
                 <div>
                   <h3>{step.title}</h3>
                   <p>{step.description}</p>
                 </div>
-              </div>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 

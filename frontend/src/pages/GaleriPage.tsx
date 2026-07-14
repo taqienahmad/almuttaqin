@@ -1,115 +1,152 @@
-import { useEffect, useState } from "react";
+import { motion } from "motion/react";
+import { useEffect, useMemo, useState } from "react";
 import { contentItemsApi } from "../api/contentItems";
 import { postsApi } from "../api/posts";
+import { BentoPhotoCard } from "../components/BentoPhotoCard";
 import { Footer } from "../components/Footer";
 import { Icon } from "../components/Icon";
-import {
-  AnakMengajiIllustration,
-  AnakSholatIllustration,
-  BelajarIllustration,
-  BermainIllustration,
-  WisudaIllustration,
-} from "../components/illustrations";
-import { ImageWithFallback } from "../components/ImageWithFallback";
+import { PhotoLightbox } from "../components/PhotoLightbox";
 import { PublicNav } from "../components/PublicNav";
 import { VideoEmbed } from "../components/VideoEmbed";
-import type { ContentItem, Post } from "../types";
+import { staggerContainer, staggerItem } from "../motionVariants";
+import type { GalleryCategory, GalleryPhoto } from "../types/gallery";
+import type { Post } from "../types";
 import { toDirectImageUrl } from "../utils/mediaUrl";
 
-const FALLBACK_ILLUSTRATIONS = [
-  AnakMengajiIllustration,
-  BermainIllustration,
-  BelajarIllustration,
-  AnakSholatIllustration,
-  WisudaIllustration,
+const CATEGORIES: { value: "semua" | GalleryCategory; label: string }[] = [
+  { value: "semua", label: "Semua" },
+  { value: "fasilitas", label: "Fasilitas" },
+  { value: "aktivitas", label: "Aktivitas" },
+  { value: "acara", label: "Acara" },
 ];
+
+const BENTO_PATTERN = ["sm:col-span-2", "", "", "", ""];
+
+function getSpanClass(index: number) {
+  return BENTO_PATTERN[index % BENTO_PATTERN.length];
+}
+
+function excerpt(text: string, maxLength = 160): string {
+  return text.length > maxLength ? `${text.slice(0, maxLength).trim()}…` : text;
+}
 
 export function GaleriPage() {
   const [posts, setPosts] = useState<Post[]>([]);
-  const [fotoSekolah, setFotoSekolah] = useState<ContentItem[]>([]);
+  const [beritaPosts, setBeritaPosts] = useState<Post[]>([]);
+  const [fotoSekolah, setFotoSekolah] = useState<GalleryPhoto[]>([]);
+  const [activeCategory, setActiveCategory] = useState<"semua" | GalleryCategory>("semua");
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   useEffect(() => {
     postsApi.list("galeri").then(setPosts).catch(() => setPosts([]));
-    contentItemsApi.list("foto_sekolah").then(setFotoSekolah).catch(() => setFotoSekolah([]));
+    postsApi.list("berita").then(setBeritaPosts).catch(() => setBeritaPosts([]));
+    contentItemsApi
+      .list("foto_sekolah")
+      .then((items) =>
+        setFotoSekolah(
+          items
+            .filter((item) => item.image_url)
+            .map((item) => ({
+              id: `foto-${item.id}`,
+              src: toDirectImageUrl(item.image_url as string),
+              alt: item.title,
+              title: item.title,
+              description: excerpt(item.description ?? ""),
+              category: "fasilitas" as const,
+            })),
+        ),
+      )
+      .catch(() => setFotoSekolah([]));
   }, []);
 
   const videoPosts = posts.filter((p) => p.video_url);
-  const photoPosts = posts.filter((p) => !p.video_url);
+
+  const aktivitasPhotos: GalleryPhoto[] = useMemo(
+    () =>
+      posts
+        .filter((p) => !p.video_url && p.image_url)
+        .map((p) => ({
+          id: `aktivitas-${p.id}`,
+          src: toDirectImageUrl(p.image_url as string),
+          alt: p.title,
+          title: p.title,
+          description: excerpt(p.content ?? ""),
+          category: "aktivitas" as const,
+        })),
+    [posts],
+  );
+
+  const acaraPhotos: GalleryPhoto[] = useMemo(
+    () =>
+      beritaPosts
+        .filter((p) => p.image_url)
+        .map((p) => ({
+          id: `acara-${p.id}`,
+          src: toDirectImageUrl(p.image_url as string),
+          alt: p.title,
+          title: p.title,
+          description: excerpt(p.content ?? ""),
+          category: "acara" as const,
+        })),
+    [beritaPosts],
+  );
+
+  const allPhotos = useMemo(
+    () => [...fotoSekolah, ...aktivitasPhotos, ...acaraPhotos],
+    [fotoSekolah, aktivitasPhotos, acaraPhotos],
+  );
+
+  const filteredPhotos =
+    activeCategory === "semua" ? allPhotos : allPhotos.filter((p) => p.category === activeCategory);
 
   return (
     <div className="page">
       <PublicNav />
       <main className="main-content">
-        <div className="container">
-          <p className="eyebrow">Dokumentasi</p>
-          <h1>Galeri</h1>
-        </div>
-
-        {/* Foto Sekolah */}
+        {/* Galeri Foto - Bento grid */}
         <section className="landing-section">
           <div className="container">
             <div className="landing-section-header">
-              <p className="eyebrow">Lingkungan Sekolah</p>
-              <h2>Foto Sekolah</h2>
+              <p className="eyebrow">Momen di TAAM Al Muttaqin</p>
+              <h2>Galeri Foto</h2>
             </div>
-            <div className="gallery-grid">
-              {fotoSekolah.map((item, index) => {
-                const Illustration = FALLBACK_ILLUSTRATIONS[index % FALLBACK_ILLUSTRATIONS.length];
-                return (
-                  <figure className="gallery-card" key={item.id}>
-                    <div className="gallery-card-media">
-                      {item.image_url ? (
-                        <ImageWithFallback
-                          src={toDirectImageUrl(item.image_url)}
-                          alt={item.title}
-                          fallback={<Illustration className="gallery-illustration" />}
-                        />
-                      ) : (
-                        <Illustration className="gallery-illustration" />
-                      )}
-                    </div>
-                    <figcaption className="gallery-card-caption">{item.title}</figcaption>
-                  </figure>
-                );
-              })}
-            </div>
-          </div>
-        </section>
 
-        {/* Kegiatan Siswa */}
-        <section className="landing-section landing-section-alt">
-          <div className="container">
-            <div className="landing-section-header">
-              <p className="eyebrow">Momen Keseharian</p>
-              <h2>Kegiatan Siswa</h2>
+            <div className="mb-8 flex flex-wrap justify-center gap-2">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat.value}
+                  type="button"
+                  onClick={() => setActiveCategory(cat.value)}
+                  className={`appearance-none rounded-full px-5 py-2 text-sm font-medium outline-none transition-all duration-200 ease-out hover:scale-105 active:scale-95 focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] focus-visible:ring-offset-2 ${
+                    activeCategory === cat.value
+                      ? "border-0 bg-[var(--color-primary)] text-white shadow-sm"
+                      : "border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)]"
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
             </div>
-            {photoPosts.length === 0 && <p className="empty-state">Belum ada foto.</p>}
-            <div className="gallery-grid">
-              {photoPosts.map((post, index) => {
-                const Illustration = FALLBACK_ILLUSTRATIONS[index % FALLBACK_ILLUSTRATIONS.length];
-                return (
-                  <figure key={post.id} className="gallery-card">
-                    <div className="gallery-card-media">
-                      {post.image_url ? (
-                        <ImageWithFallback
-                          src={toDirectImageUrl(post.image_url)}
-                          alt={post.title}
-                          fallback={<Illustration className="gallery-illustration" />}
-                        />
-                      ) : (
-                        <Illustration className="gallery-illustration" />
-                      )}
-                    </div>
-                    <figcaption className="gallery-card-caption">{post.title}</figcaption>
-                  </figure>
-                );
-              })}
-            </div>
+
+            {filteredPhotos.length === 0 ? (
+              <p className="empty-state">Belum ada foto di kategori ini.</p>
+            ) : (
+              <motion.div layout className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 md:grid-cols-3">
+                {filteredPhotos.map((photo, index) => (
+                  <BentoPhotoCard
+                    key={photo.id}
+                    photo={photo}
+                    spanClassName={getSpanClass(index)}
+                    onOpen={() => setLightboxIndex(index)}
+                  />
+                ))}
+              </motion.div>
+            )}
           </div>
         </section>
 
         {/* Video Dokumentasi */}
-        <section className="landing-section">
+        <section className="landing-section landing-section-alt">
           <div className="container">
             <div className="landing-section-header">
               <p className="eyebrow">Rekam Jejak</p>
@@ -124,19 +161,34 @@ export function GaleriPage() {
                 <p>Video dokumentasi kegiatan sedang kami siapkan. Nantikan pembaruannya di sini.</p>
               </div>
             ) : (
-              <div className="grid">
+              <motion.div
+                className="grid"
+                variants={staggerContainer}
+                initial="hidden"
+                whileInView="show"
+                viewport={{ once: true, amount: 0.2 }}
+              >
                 {videoPosts.map((post) => (
-                  <div className="card" key={post.id}>
+                  <motion.div className="card" key={post.id} variants={staggerItem}>
                     <VideoEmbed url={post.video_url as string} />
                     <h3 className="post-card-title">{post.title}</h3>
-                  </div>
+                  </motion.div>
                 ))}
-              </div>
+              </motion.div>
             )}
           </div>
         </section>
       </main>
       <Footer />
+
+      {lightboxIndex !== null && (
+        <PhotoLightbox
+          photos={filteredPhotos}
+          index={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNavigate={setLightboxIndex}
+        />
+      )}
     </div>
   );
 }

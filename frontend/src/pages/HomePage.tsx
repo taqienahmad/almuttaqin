@@ -1,3 +1,4 @@
+import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Footer } from "../components/Footer";
@@ -8,6 +9,7 @@ import { PublicNav } from "../components/PublicNav";
 import { postsApi } from "../api/posts";
 import { contentItemsApi } from "../api/contentItems";
 import { useSiteSettings } from "../context/SiteSettingsContext";
+import { staggerContainer, staggerItem } from "../motionVariants";
 import type { ContentItem, Post } from "../types";
 
 export function HomePage() {
@@ -44,7 +46,7 @@ export function HomePage() {
             </div>
           </div>
           <div className="hero-illustration">
-            <img src="/logo_muttaqin.png" alt="Logo TAAM Al Muttaqin" />
+            <img src="/logo_muttaqin.png" alt="Logo TAAM Al Muttaqin" className="float-animation" />
             <p className="hero-license-note">
               <Icon name="shield" /> {settings.hero_license_text}
             </p>
@@ -90,17 +92,23 @@ export function HomePage() {
               <p className="eyebrow">Kenapa Memilih Kami</p>
               <h2>Keunggulan TAAM Al Muttaqin</h2>
             </div>
-            <div className="grid">
+            <motion.div
+              className="grid"
+              variants={staggerContainer}
+              initial="hidden"
+              whileInView="show"
+              viewport={{ once: true, amount: 0.2 }}
+            >
               {keunggulan.map((item) => (
-                <div className="card feature-card" key={item.id}>
+                <motion.div className="card feature-card" key={item.id} variants={staggerItem}>
                   <div className="icon-circle">
                     <Icon name={(item.icon ?? "sparkles") as IconName} />
                   </div>
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
-                </div>
+                </motion.div>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 

@@ -28,8 +28,8 @@ class User(Base):
 
     # Role-specific fields kept directly on User rather than separate profile
     # tables, to avoid join overhead for a handful of optional columns.
-    nis: Mapped[str | None] = mapped_column(String(50), nullable=True)  # siswa
-    nip: Mapped[str | None] = mapped_column(String(50), nullable=True)  # guru
+    nis: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)  # siswa
+    nip: Mapped[str | None] = mapped_column(String(50), unique=True, nullable=True)  # guru
     kelas_id: Mapped[int | None] = mapped_column(
         ForeignKey("kelas.id", ondelete="SET NULL"), nullable=True
     )  # siswa's current class

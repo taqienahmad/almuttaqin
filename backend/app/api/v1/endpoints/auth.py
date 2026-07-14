@@ -17,5 +17,10 @@ async def login(credentials: UserLogin, db: AsyncSession = Depends(get_db)) -> T
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect email or password"
         )
+    if not user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Akun dinonaktifkan, hubungi admin sekolah",
+        )
     access_token = create_access_token(subject=user.email)
     return Token(access_token=access_token)
